@@ -1861,11 +1861,24 @@ async function deleteSelected() {
 }
 
 // ── MongoDB API helpers ──────────────────────────────────────
-const API_BASE = 'https://survey4-production.up.railway.app';
+// ── Config ───────────────────────────────────────────────
+const API_BASE = 'https://survey4-production.up.railway.app'; // رابط الباك اند النهائي على Railway
+const STORAGE_KEY = 'ai_survey_all_responses'; // مفتاح localStorage
 
+// ── LocalStorage fallback ───────────────────────────────
+function saveToLocalStorage(doc) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    existing.push(doc);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+    return existing.length;
+  } catch(e) { return 0; }
+}
+
+// ── MongoDB API helpers ───────────────────────────────
 async function saveToMongo(doc) {
   try {
-    const res = await fetch(`${API_BASE}/response`, {
+    const res = await fetch(`${API_BASE}/api/response`, { // رابط صحيح
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(doc)
@@ -1883,12 +1896,16 @@ async function getAllResponses() {
   try {
     const params = new URLSearchParams(window.location.search);
     const token  = params.get('token') || '';
-    const res = await fetch(`${API_BASE}/responses?token=${encodeURIComponent(token)}`);
+    const res = await fetch(`${API_BASE}/api/responses?token=${encodeURIComponent(token)}`); // رابط صحيح
     if (!res.ok) throw new Error('fetch failed');
     return await res.json();
   } catch(e) {
     console.warn('MongoDB fetch failed, using localStorage', e);
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+    try { 
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); 
+    } catch { 
+      return []; 
+    }
   }
 }
 
@@ -1896,7 +1913,7 @@ async function deleteResponsesByIndex(idxSet) {
   try {
     const params = new URLSearchParams(window.location.search);
     const token  = params.get('token') || '';
-    const res = await fetch(`${API_BASE}/responses/delete?token=${encodeURIComponent(token)}`, {
+    const res = await fetch(`${API_BASE}/api/responses/delete?token=${encodeURIComponent(token)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ indices: [...idxSet] })
@@ -1908,68 +1925,6 @@ async function deleteResponsesByIndex(idxSet) {
     const kept = all.filter((_, i) => !idxSet.has(i));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(kept));
   }
-}
-
-// ── LocalStorage fallback ──────────────────────────────────────
-const STORAGE_KEY = 'ai_survey_all_responses';
-
-function saveToLocalStorage(doc) {
-  try {
-    const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    existing.push(doc);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
-    return existing.length;
-  } catch(e) { return 0; }
-}
-
-async function showExcelButton() {
-  const all = await getAllResponses();
-  const total = all.length;
-  const el    = document.getElementById('excelBtnWrap');
-  if (!el) return;
-  el.style.display = 'block';
-  const label = document.getElementById('excelBtnText');
-  if (label) {
-    label.textContent = lang === 'ar'
-      ? `📊 تنزيل Excel — ${total} ${total === 1 ? 'استجابة' : 'استجابات'}`
-      : `📊 DOWNLOAD EXCEL — ${total} ${total === 1 ? 'response' : 'responses'}`;
-  }
-}
-
-async function downloadExcel() {
-  if (!isAdminSession()) return;
-  const allDocs = await getAllResponses();
-  if (allDocs.length === 0) return;
-
-  const headers = Object.keys(allDocs[0]);
-  const rows    = allDocs.map(doc => headers.map(h => doc[h] !== undefined ? doc[h] : ''));
-
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 4, 22) }));
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'All Responses');
-
-  const ts = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `AI_Survey_${allDocs.length}_responses_${ts}.xlsx`);
-}
-
-
-async function adminDownloadExcel() {
-  const all = await getAllResponses();
-  if (all.length === 0) return;
-
-  const headers = Object.keys(all[0]);
-  const rows    = all.map(doc => headers.map(h => doc[h] !== undefined ? doc[h] : ''));
-
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 4, 22) }));
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'All Responses');
-
-  const ts = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `AI_Survey_${all.length}_responses_${ts}.xlsx`);
 }
 // ==================== CONFETTI ====================
 function launchConfetti() {
