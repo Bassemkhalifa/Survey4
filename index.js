@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3000;
 // ── MongoDB Atlas Connection ──────────────────────────────────
 // ⚠️  ضع هنا الـ connection string الخاص بك من MongoDB Atlas
 // الصيغة: mongodb+srv://<username>:<password>@<cluster>.mongodb.net/ai_mirror_survey?retryWrites=true&w=majority
-const MONGO_URI = 'mongodb+srv://khlyfhbasm71_db_user:kIJ00PKcJGognZaV@cluster0.6ibcc7y.mongodb.net/ai_mirror_survey?retryWrites=true&w=majority';
+const MONGO_URI = 'mongodb+srv://khlyfhbasm71_db_user:kIJ00PKcJGognZaV@cluster0.6ibcc7y.mongodb.net/?appName=Cluster0';
 
 mongoose.connect(MONGO_URI, {
   serverSelectionTimeoutMS: 10000,
